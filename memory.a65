@@ -1,0 +1,27 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+a_entry                     = $2020
+a_scrnptr                   = $8000
+a_sprptr                    = $8400
+a_sprites                   = $8500
+a_music                     = $10e00
+; 256 NCM chars * 64 byte
+a_charset                   = $13000
+a_cram_backup               = $1f000
+
+map_default macro
+    ldz     #$83 ; map C65 ROM @ 0x3e000 to 0xe000
+    ldy     #$00 ; 0x8000-dfff unmapped (c000- is now interfaced via 0xd030 and 0xd000 is I/O)
+    ldx     #$e0 ; 0x0000-1fff unmapped (from bank 0, AND allows further 0xd030 and 0x01 mapping)
+    lda     #$00 ; 0x2000-7fff   mapped (from bank 0, allows no further mappings!)
+    map
+endm
+
+ldqi macro dword
+    ldz     #(\dword>>24)&$ff
+    ldy     #(\dword>>16)&$ff
+    ldx     #(\dword>>8)&$ff
+    lda     #\dword&$ff
+endm

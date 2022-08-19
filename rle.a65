@@ -1,0 +1,51 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+rle_src = $fb
+rle_dest = $1b
+
+rle_lastbyte
+    byte 0
+rle_destlen
+    word 0
+
+rle_read
+    lda (rle_src),z
+    inc rle_src
+    bne :+
+    inc rle_src + 1
+:	rts
+
+rle_store
+	sta [rle_dest],z
+	inc rle_dest
+	bne :+
+	inc rle_dest + 1
+:	inc rle_destlen
+	bne :+
+	inc rle_destlen + 1
+:	rts
+
+rle_unpack
+	ldz #0
+	stz rle_destlen		; reset byte counter
+	stz rle_destlen + 1
+	jsr rle_read		; read the first byte
+	sta rle_lastbyte    ; save as last byte
+	jsr rle_store		; store
+.l	jsr rle_read		; read next byte
+	cmp rle_lastbyte	; same as last one?
+	beq :+		    	; yes, unpack
+	sta rle_lastbyte	; save as last byte
+	jsr rle_store		; store
+	jmp .l         		; next
+:	jsr rle_read		; read byte count
+	tax
+	beq .x		    	; 0 = end of stream
+	lda rle_lastbyte
+:	jsr rle_store		; store X bytes
+	dex
+	bne :-
+	beq .l		    	; next
+.x	rts

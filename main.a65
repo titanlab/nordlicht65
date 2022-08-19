@@ -1,0 +1,214 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+    include "./const.a65"
+    include "./macros.a65"
+    include "./memory.a65"
+
+;
+; https://www.forum64.de/index.php?thread/122245-verwendung-von-sys-in-bank-0-f%C3%BChrt-zu-absturz/&pageNo=3
+; https://gist.github.com/jimnicholls/def3a162790ef5f86ee68de2466b68c4
+; evtl jsr     $038d um das zu autom.
+;
+; Leider nicht. Die MAP Instruktion stellt das Mapping zwar ein, man kann es aber nicht mehr auslesen.
+; Daher gibt es die Konvention, dass jeder, der das Mapping verändert, das neue Mapping nach 0x011C-0x011F speichert.
+; Da kann es jeder wieder auslesen. Aber wenn sich jemand nicht daran hält, hat man eben Pech.
+;
+
+    entry   a_entry
+
+    jmp     sysinfo
+
+    fill    ((a_entry&$f000)+$100)-*
+
+si_data
+    defl    0, 0
+
+sysinfo
+    jsr     kernal_primm
+    string  "HV"
+    lda     #$30
+    tax
+    tay
+    taz
+    stq     si_data
+    htrap   hyppo_getversion
+    clc
+    adcq    si_data
+    jsr     print_lo_nibble
+    lda     #"."
+    jsr     kernal_chrout
+    txa
+    jsr     print_lo_nibble
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "DV"
+    tya
+    jsr     print_lo_nibble
+    lda     #"."
+    jsr     kernal_chrout
+    tza
+    jsr     print_lo_nibble
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "IO: $"
+    lda     reg_io
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "D030: $"
+    lda     vic3_map
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    lda     #$00
+    tax
+    tay
+    taz
+    stq     si_data
+    stq     si_data+4
+
+    jsr     kernal_primm
+    string  "MEM: "
+    ldy     #>si_data
+    htrap   hyppo_get_mapping
+
+    jsr     kernal_primm
+    string  "MAPLO=$"
+    lda     si_data
+    jsr     print_byte
+    lda     si_data+1
+    jsr     print_byte
+    lda     #","
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "MAPHI=$"
+    lda     si_data+2
+    jsr     print_byte
+    lda     si_data+3
+    jsr     print_byte
+    lda     #","
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "MBLO=$"
+    lda     si_data+4
+    jsr     print_byte
+    lda     #","
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "MBHI=$"
+    lda     si_data+5
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "D64A: $"
+    lda     $d64a
+    jsr     print_byte
+    lda     $d64b
+    jsr     print_byte
+    lda     $d64c
+    jsr     print_byte
+    lda     $d64d
+    jsr     print_byte
+    lda     $d64e
+    jsr     print_byte
+    lda     $d64f
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "D060: $"
+    lda     vic4_scrnptr+3
+    and     #$0f
+    jsr     print_lo_nibble
+    lda     vic4_scrnptr+2
+    jsr     print_byte
+    lda     vic4_scrnptr+1
+    jsr     print_byte
+    lda     vic4_scrnptr
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "D070: $"
+    lda     vic4_palsel
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "C800: $"
+    lda     $c800
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "1104: $"
+    lda     $1104
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "D012: $"
+    lda     vic2_raster
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "D01A: $"
+    lda     vic2_irm
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "RASTER-X: $"
+    lda     vic4_rasterx
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     kernal_primm
+    string  "DO70X: $"
+    lda     vic4_palsel
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    jsr     main2
+
+    jsr     kernal_primm
+    string  "D06C: $"
+    lda     vic4_sprptr+2
+    jsr     print_byte
+    lda     vic4_sprptr+1
+    jsr     print_byte
+    lda     vic4_sprptr
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    rts
+
+    include "./main2.a65"
+    include "./demo.a65"
+    include "./util.a65"
+    include "./music.a65"

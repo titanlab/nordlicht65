@@ -1,0 +1,44 @@
+    ; ----------------------------------
+    ; 6of5
+    ; ----------------------------------
+
+print_hi_nibble
+    ; print high nibble
+    lsr
+    lsr
+    lsr
+    lsr
+    cmp #$a
+    bcc :+
+    clc
+    adc #$37
+    jsr kernal_chrout
+    bra :++
+:   clc
+    adc #$30
+    jsr kernal_chrout
+:   rts
+
+print_lo_nibble
+    ; print low nibble
+    and #$f
+    cmp #$a
+    bcc :+
+    clc
+    adc #$37
+    jsr kernal_chrout
+    bra :++
+:   clc
+    adc #$30
+    jsr kernal_chrout
+:   rts
+
+    ;
+    ; void print_byte .a
+    ;
+print_byte
+    pha
+    jsr print_hi_nibble
+    pla
+    jsr print_lo_nibble
+    rts

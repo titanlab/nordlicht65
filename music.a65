@@ -1,0 +1,27 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+music_reset
+    lda #$ff
+
+.l  ldx #$17
+:   sta $d400,x
+    dex
+    bpl :-
+    tax
+    bpl :+
+    lda #$08
+    bpl .l
+:   bit $d011
+    bpl :-
+:   bit $d011
+    bmi :-
+    eor #$08
+    beq .l
+
+    lda #$0f
+    sta $d418
+
+    rts
+

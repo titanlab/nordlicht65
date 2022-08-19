@@ -1,0 +1,141 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+entry macro startup
+    org     $2001
+
+    word    .a
+    word    10
+    byte    $fe,$02
+    byte    "0"
+    byte    0
+
+.a  word    .b
+    word    20
+    byte    $9e
+    byte    <(((\startup / 1000) % 10) + '0')
+    byte    <(((\startup /  100) % 10) + '0')
+    byte    <(((\startup /   10) % 10) + '0')
+    byte    <(((\startup /    1) % 10) + '0')
+    byte    0
+
+.b  word    .c
+    word    30
+    byte    $fe,$02
+    byte    "128"
+    byte    0
+
+.c  word    0
+
+    fill    \startup-*
+endm
+
+;
+; https://c65gs.blogspot.com/2015/09/making-speed-control-easier.html?m=0
+;
+; gs4510.vhdl, line 2950-
+;
+; Special use case of DDR
+;
+; report "MEMORY: Writing to CPU DDR register" severity note;
+; if value = x"40" then
+;   force_fast <= '0';
+; elsif value = x"41" then
+;   force_fast <= '1';
+; else
+;   cpuport_ddr <= value;
+; end if;
+;
+cpu_1mhz macro
+	lda     #$40
+	sta     reg_ddr
+endm
+
+cpu_48mhz macro
+	lda     #$41
+	sta     reg_ddr
+endm
+
+vic_knock_ii macro
+    lda     #$00
+    sta     vic4_io
+    lda     #$00
+    sta     vic4_io
+endm
+
+vic_knock_iii macro
+    lda     #$a5
+    sta     vic4_io
+    lda     #$96
+    sta     vic4_io
+endm
+
+vic_knock_iv macro
+    lda     #$47
+    sta     vic4_io
+    lda     #$53
+    sta     vic4_io
+endm
+
+vic_knock_ethernet macro
+    lda     #$45
+    sta     vic4_io
+    lda     #$54
+    sta     vic4_io
+endm
+
+htrap macro val
+    lda     #(<\val)
+    ; $d640 - $d67f
+    sta     htrap_base+(>\val)
+    clv
+endm
+
+dma_cmd_copy macro len, src, dst
+    byte    $00            ; copy
+    word    \len           ; len
+    word    \src&$ffff     ; src
+    byte    \src>>16       ; src bank
+    word    \dst&$ffff     ; dst
+    byte    \dst>>16       ; dst bank
+    byte    $00            ; cmd hibyte
+    word    $0000          ; modulo
+endm
+
+dma_run macro addr
+    lda     #(\addr>>16)&$f
+    sta     dma_addrbank
+    lda     #>\addr
+    sta     dma_addrmsb
+    lda     #<\addr
+    sta     dma_addrlsb
+endm
+
+setirqi macro addr
+	lda     #<\addr
+	ldx     #>\addr
+    sta     reg_cinv
+    stx     reg_cinv+1
+endm
+
+setirqa macro addr
+	lda     \addr
+	ldx     \addr+1
+    sta     reg_cinv
+    stx     reg_cinv+1
+endm
+
+setnmii macro addr
+	lda     #<\addr
+	ldx     #>\addr
+    sta     reg_nminv
+    stx     reg_nminv+1
+endm
+
+setnmia macro addr
+	lda     \addr
+	ldx     \addr+1
+    sta     reg_nminv
+    stx     reg_nminv+1
+endm

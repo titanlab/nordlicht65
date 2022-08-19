@@ -1,0 +1,144 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+pet_cr                      = $0d
+
+reg_ddr                     = $00
+reg_io                      = $01
+
+reg_cinv                    = $0314
+reg_nminv                   = $0318
+
+vic2_sprx                   = $d000
+vic2_spry                   = $d001
+vic2_sprxmsb                = $d010
+vic2_raster                 = $d012
+vic2_spren                  = $d015
+vic2_crb                    = $d016
+vic2_ir                     = $d019
+vic2_irm                    = $d01a
+vic2_bordercol              = $d020
+vic2_bgcol0                 = $d021
+vic2_bgcol1                 = $d022
+vic2_bgcol2                 = $d023
+vic2_bgcol3                 = $d024
+vic2_spr0col                = $d027
+vic2_spr1col                = $d028
+vic2_spr2col                = $d029
+vic2_spr3col                = $d02a
+vic2_spr4col                = $d02b
+vic2_spr5col                = $d02c
+vic2_spr6col                = $d02d
+vic2_spr7col                = $d02e
+vic2_cram                   = $d800
+
+vic2_csel                   = 1<<3
+
+vic3_map                    = $d030
+
+vic3_crb                    = $d031
+vic3_crb_h640               = %10000000
+
+vic3_rpal                   = $d100
+vic3_gpal                   = $d200
+vic3_bpal                   = $d300
+
+vic4_io                     = $d02f
+vic4_palsel                 = $d070
+
+vic4_textxpos               = $d04c
+vic4_textypos               = $d04e
+
+vic4_rasterx                = $d050
+
+vic4_crc                    = $d054
+vic4_crc_chr16              = %001
+vic4_crc_fclrlo             = %010
+vic4_crc_fclrhi             = %100
+vic4_cram                   = $1f800
+
+vic4_sprhgten               = $d055
+vic4_sprhgt                 = $d056
+
+vic4_sprx64en               = $d057
+
+vic4_linesteplsb            = $d058
+vic4_linestepmsb            = $d059
+
+vic4_chrxscl                = $d05a
+
+vic4_scrnptr                = $d060
+vic4_colptr                 = $d064
+vic4_charptr                = $d068
+vic4_spr16en                = $d06b
+vic4_sprptr                 = $d06c
+
+vic4_sprptr16               = 1<<7
+
+seam_wide                   = 1<<3
+seam_gotox                  = 1<<4
+
+util_m65model               = $d629
+
+htrap_base                  = $d640
+
+kernal_primm                = $ff7d
+kernal_scnkey               = $ff9f
+kernal_chrin                = $ffcf
+kernal_chrout               = $ffd2
+kernal_getin                = $ffe4
+
+hyppo_getversion            = $0000
+hyppo_getdefaultdrive       = $0002
+hyppo_getcurrentdrive       = $0004
+hyppo_selectdrive           = $0006
+hyppo_chdir                 = $000c
+hyppo_opendir               = $0012
+hyppo_readdir               = $0014
+hyppo_closedir              = $0016
+hyppo_openfile              = $0018
+hyppo_readfile              = $001a
+hyppo_closefile             = $0020
+hyppo_closeall              = $0022
+hyppo_setname               = $002e
+hyppo_findfirst             = $0030
+hyppo_findnext              = $0032
+hyppo_findfile              = $0034
+hyppo_loadfile              = $0036
+hyppo_geterrorcode          = $0038
+hyppo_setup_transfer_area   = $003a
+hyppo_loadfile_attic        = $003e
+hyppo_d81attach0            = $0040
+hyppo_d81detach             = $0042
+hyppo_d81write_en           = $0044
+hyppo_d81attach1            = $0046
+hyppo_toggle_rom_writeprot  = $0070
+hyppo_toggle_force_4502     = $0072
+hyppo_get_mapping           = $0074
+hyppo_set_mapping           = $0076
+hyppo_get_proc_desc         = $0078
+hyppo_serial_monitor_write  = $007c
+hyppo_reset                 = $007e
+
+hyppo_rom_writeprotect      = $0100
+hyppo_rom_writeenable       = $0102
+
+hyppo_configsector_read     = $0200
+hyppo_configsector_write    = $0202
+hyppo_configsector_apply    = $0204
+hyppo_dmagic_autoset        = $0206
+hyppo_locate_freeze_slot    = $0210
+hyppo_unfreeze_from_slot    = $0212
+hyppo_read_freeze_reglist   = $0214
+hyppo_get_slot_count        = $0216
+
+c64io_default               = $30
+c64io_basic_rom             = $01
+c64io_kernal_rom            = $02
+c64io_char_rom              = $04
+
+dma_addrlsb                 = $d700
+dma_addrmsb                 = $d701
+dma_addrbank                = $d702
+

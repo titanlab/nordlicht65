@@ -1,0 +1,671 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+bordercol       = 0
+bgcol           = 0
+
+h_top_bar       = 15
+h_bottom_bar    = 16
+
+rp_start        = $10
+rp_logo_end     = $d9
+
+tw_xoffset      = 14
+
+scr_nsprites    = 6
+scr_spry        = 150
+
+; ----------------------------------
+
+scr_pos_spr macro
+
+    ; offset
+    txa
+    asl
+    tay
+
+    ; x
+    lda     scr_sprx
+    sta     vic2_sprx,y
+    clc
+    adc     #64
+    sta     scr_sprx
+    lda     scr_sprx+1
+    pha
+    adc     #0
+    sta     scr_sprx+1
+    pla
+    beq     .\@
+    lda     vic2_sprxmsb
+    ora     bits,x
+    sta     vic2_sprxmsb
+
+    ; y
+.\@ lda     scr_top
+    clc
+    adc     #35
+    sta     vic2_spry,y
+
+endm
+
+; ----------------------------------
+
+demo_irq
+    ; map SID memory in and play
+    ldz     #$83
+    ldy     #$00
+    ldx     #$11 ; $0000-$1fff -> $10000-$11fff
+    lda     #$00
+    map
+    eom
+    jsr     music_isr
+    map_default
+    eom
+
+    ;
+    ; scroller logic
+    ;
+
+    ; y position of bar
+    ldy     time
+    lda     sine,y
+    lsr
+    lsr
+    clc
+    adc     #81
+    sta     scr_top
+
+    ; calc scroller internal time and extend pos
+    lda     time
+    sta     scr_t
+    tax
+    lda     time+1
+    lsr
+    sta     scr_t+1
+    ror     scr_t
+    lsr     scr_t+1
+    ror     scr_t
+    lsr     scr_t+1
+    ror     scr_t
+    lsr     scr_t+1
+    ror     scr_t
+    lda     scr_t
+    asl
+    rol     scr_t+1
+    and     scr_text_len
+    sta     scr_pos
+    lda     scr_t+1
+    and     scr_text_len+1
+    sta     scr_pos+1
+    txa
+    and     #%1111
+    sta     scr_time
+
+    ; calc ptr to text
+    lda     #<scr_text
+    clc
+    adc     scr_pos
+    sta     $27
+    lda     #>scr_text
+    adc     scr_pos+1
+    sta     $28
+
+    ; calc x
+    lda     #30
+    sec
+    sbc     scr_time
+    sta     scr_sprx
+
+    lda     #0
+    sta     scr_sprx+1
+    sta     vic2_sprxmsb
+
+    ldx     #0
+    ldz     #0
+.ps scr_pos_spr
+    inx
+    cpx     #scr_nsprites
+    bne     :+
+    ldx     #0
+:   inz
+    cpz     #scr_nsprites
+    bne     .ps
+
+    lda     #16
+    sta     vic2_spr0col
+    sta     vic2_spr1col
+    sta     vic2_spr2col
+    sta     vic2_spr3col
+    sta     vic2_spr4col
+    sta     vic2_spr5col
+
+    lda     #<a_sprites
+    sta     $fb
+    lda     #>a_sprites
+    sta     $fc
+
+    ldx     #0
+.dc txa
+    tay
+    lda     ($27),y
+    bmi     .dx
+    cpx     #scr_nsprites*8
+    beq     .dx
+
+    ; 16 byte per char
+    ldy     #>scr_font
+    asl
+    asl
+    asl
+    bcc     :+
+    iny
+    iny
+:   asl
+    bcc     :+
+    iny
+
+:   clc
+    adc     #<scr_font
+    sta     $fd
+    tya
+    adc     #00
+    sta     $fe
+
+    ldy     #0
+    ldz     #0
+.dl lda     ($fd),y
+    sta     ($fb),z
+    iny
+    tza
+    clc
+    adc     #8
+    taz
+    cpy     #16
+    bne     .dl
+
+    txa
+    and     #7
+    cmp     #7
+    beq     :+
+    inc     $fb
+    bra     :++
+:   lda     $fb
+    clc
+    adc     #$80-7
+    sta     $fb
+    lda     $fc
+    adc     #$00
+    sta     $fc
+
+:   inx
+    bra     .dc
+
+.dx
+
+    ;
+    ; raster tricks
+    ;
+
+    ; top wobble
+.tw lda     vic2_raster
+:   cmp     vic2_raster
+    beq     :-
+    cmp     scr_top
+    beq     .b
+    clc
+    adc     time
+    tay
+    lda     sine,y
+    lsr
+    clc
+    adc     #tw_xoffset
+    sta     vic4_textxpos
+    bra     .tw
+
+    ; init bars
+.b  lda     vic2_raster
+:   cmp     vic2_raster
+    beq     :-
+
+    lda     #17
+    sta     vic2_bgcol0
+    sta     vic2_bordercol
+
+    lda     vic2_raster
+:   cmp     vic2_raster
+    beq     :-
+
+    lda     time
+    inc
+    and     #$1f
+    clc
+    adc     #$10
+    sta     vic2_bgcol0
+    sta     vic2_bordercol
+
+    lda     time
+    lsr
+    lsr
+    and     #$f
+    clc
+    adc     #$20
+    tax
+    lda     vic3_rpal,x
+    sta     vic3_rpal+16
+    lda     vic3_gpal,x
+    sta     vic3_gpal+16
+    lda     vic3_bpal,x
+    sta     vic3_bpal+16
+
+    lda     #$00
+    sta     vic3_rpal+1
+    sta     vic3_gpal+1
+    sta     vic3_bpal+1
+
+    lda     #$ff
+    sta     vic3_rpal+17
+    sta     vic3_gpal+17
+    sta     vic3_bpal+17
+
+    ; top bar
+    ldx     #h_top_bar
+.tb lda     vic2_raster
+:   cmp     vic2_raster
+    beq     :-
+    clc
+    adc     time
+    tay
+    lda     sine,y
+    lsr
+    clc
+    adc     #tw_xoffset
+    sta     vic4_textxpos
+    lda     vic2_bordercol
+    inc
+    and     #$f
+    clc
+    adc     #$10
+    sta     vic2_bgcol0
+    sta     vic2_bordercol
+    dex
+    bne     .tb
+
+    ; lower bar
+    ldx     #h_bottom_bar
+.lb lda     vic2_raster
+:   cmp     vic2_raster
+    beq     :-
+    clc
+    adc     time
+    tay
+    lda     sine,y
+    lsr
+    clc
+    adc     #tw_xoffset
+    sta     vic4_textxpos
+    lda     vic2_bordercol
+    dec
+    and     #$f
+    clc
+    adc     #$10
+    sta     vic2_bgcol0
+    sta     vic2_bordercol
+    dex
+    bne     .lb
+
+    ; white stripe
+    lda     #17
+    sta     vic2_bgcol0
+    sta     vic2_bordercol
+
+    lda     vic2_raster
+:   cmp     vic2_raster
+    beq     :-
+
+
+    ; reset raster bars
+    lda     #bordercol
+    sta     vic2_bordercol
+    lda     #bgcol
+    sta     vic2_bgcol0
+    lda     #$ff
+    sta     vic3_rpal+1
+    sta     vic3_gpal+1
+    sta     vic3_bpal+1
+
+    ; bottom wobble
+.bw lda     vic2_raster
+:   cmp     vic2_raster
+    beq     :-
+    cmp     #rp_logo_end
+    beq     .t
+    clc
+    adc     time
+    tay
+    lda     sine,y
+    lsr
+    clc
+    adc     #tw_xoffset
+    sta     vic4_textxpos
+    bra     .bw
+
+    ; increase time
+.t  inc     time
+    bne     :+
+    inc     time+1
+:   bne     :+
+    inc     time+2
+:   bne     :+
+    inc     time+3
+
+:   jmp     (o_irq)
+
+; ----------------------------------
+
+init_sine
+    ldy     #$3f
+    ldx     #$00
+
+    stx     sine_value
+    stx     sine_value+1
+    stx     sine_delta
+    stx     sine_delta+1
+
+    ; Accumulate the delta (normal 16-bit addition)
+.s  lda     sine_value
+    clc
+    adc     sine_delta
+    sta     sine_value
+    lda     sine_value+1
+    adc     sine_delta+1
+    sta     sine_value+1
+
+    ; Reflect the value around for a sine wave
+    sta     sine+$c0,x
+    sta     sine+$80,y
+    eor     #$ff
+    sta     sine+$40,x
+    sta     sine+$00,y
+
+    ; Increase the delta, which creates the "acceleration" for a parabola
+    lda     sine_delta
+    adc     #$10   ; this value adds up to the proper amplitude
+    sta     sine_delta
+    bcc     :+
+    inc     sine_delta+1
+
+    ; Loop
+:   inx
+    dey
+    bpl     .s
+
+    rts
+
+; ----------------------------------
+
+demo_start
+    ; point interrupt to new routine
+    lda     #rp_start
+    sta     vic2_raster
+    lda     #1
+    sta     vic2_irm
+    setirqi demo_irq
+
+    ; map SID memory in and run init
+    ldz     #$83
+    ldy     #$00
+    ldx     #$11 ; $0000-$1fff -> $10000-$11fff
+    lda     #$00
+    map
+    eom
+    lda     #$00
+    jsr     music_init
+
+    ; reset memory mapping
+    map_default
+    jsr     $038d ; tell BASIC about new memory mapping
+
+    ; gen sine table
+    jsr     init_sine
+
+    rts
+
+; ----------------------------------
+
+demo_stop
+    ; reset music
+    jsr     music_reset
+
+    rts
+
+; ----------------------------------
+
+demo_main
+    lda     vic2_bordercol
+    sta     o_bordercol
+    lda     vic2_bgcol0
+    sta     o_scrcol
+    lda     #bordercol
+    sta     vic2_bordercol
+    lda     #bgcol
+    sta     vic2_bgcol0
+
+    ;
+    ; enable NCM
+    ;
+
+    ; enable SEAM
+    ;lda     vic4_crc
+    ;sta     o_crc
+    ;ora     #(vic4_crc_chr16 | vic4_crc_fclrhi)
+    ;sta     vic4_crc
+
+    ; disable 80 char mode
+    lda     vic3_crb
+    sta     o_vic3_crb
+    lda     #(vic3_crb_h640)
+    trb     vic3_crb
+
+    ; 40 bytes per line
+    lda     vic4_linesteplsb
+    sta     o_linestep
+    lda     #40
+    sta     vic4_linesteplsb
+    lda     #0
+    sta     vic4_linestepmsb
+
+    ; 39 columns
+    lda     vic2_crb
+    sta     o_vic2_crb
+    and     #~vic2_csel
+    sta     vic2_crb
+
+    ; use another col pal here:
+
+    ; -- Palette bank selection registers
+    ; signal palette_bank_fastio : std_logic_vector(1 downto 0) := "11";
+    ; signal palette_bank_chargen : std_logic_vector(1 downto 0) := "11";
+    ; signal palette_bank_chargen_alt : std_logic_vector(1 downto 0) := "11";
+    ; signal palette_bank_sprites : std_logic_vector(1 downto 0) := "11";
+    lda     vic4_palsel
+    sta     o_palsel
+    ;lda     #%10101010
+    ;and     #%00001111
+    ;sta     vic4_palsel
+
+    ; new screen
+    ldq     vic4_scrnptr
+    stq     o_scrnptr
+    lda     #(<a_scrnptr)
+    sta     vic4_scrnptr
+    lda     #(>a_scrnptr)
+    sta     vic4_scrnptr+1
+    lda     #(a_scrnptr>>16)&$ff
+    sta     vic4_scrnptr+2
+    lda     vic4_scrnptr+3
+    and     #%11110000
+    ora     #(a_scrnptr>>24)&$f
+    sta     vic4_scrnptr+3
+
+    ; new charset
+    ldq     vic4_charptr
+    stq     o_charptr
+    lda     #(<a_charset)
+    sta     vic4_charptr
+    lda     #(>a_charset)
+    sta     vic4_charptr+1
+    lda     #(a_charset>>16)&$ff
+    sta     vic4_charptr+2
+
+    ; conf scroller sprites
+    lda     #(1<<scr_nsprites)-1
+    sta     vic2_spren      ; enable
+    sta     vic4_sprx64en   ; 64-bit width
+    sta     vic4_sprhgten   ; ext. height enabled
+    lda     #16
+    sta     vic4_sprhgt     ; height = 16
+
+    ; place pointers in a_sprites
+    lda     #<(a_sprites>>6)
+    ldz     #>(a_sprites>>6)
+    ldx     #0
+:   sta     a_sprptr,x
+    stz     a_sprptr+1,x
+    clc
+    adc     #2 ; 64width * 16height / 8 (monochrome) = 128 / 64 = 2
+    inx
+    inx
+    cpx     #(scr_nsprites*2)
+    bne     :-
+
+    lda     #(<a_sprptr)
+    sta     vic4_sprptr
+    lda     #(>a_sprptr)
+    sta     vic4_sprptr+1
+    lda     #(a_sprptr>>16)&$7f
+    ora     #vic4_sprptr16
+    sta     vic4_sprptr+2
+
+    ; sprite data
+    ldx     #$00
+    lda     #$aa
+    ldz     #$ff
+:   sta     a_sprites,x
+    stz     a_sprites+$100,x
+    sta     a_sprites+$200,x
+    dex
+    bne     :-
+
+    ; backup color ram
+    dma_run cram_backup_dma
+    dma_run nl_cram_dma
+
+    dma_run nl_cset_dma
+    dma_run nl_scr_dma
+
+    ; wait
+:   jsr     kernal_getin
+    beq     :-
+
+    ; restore color ram
+    dma_run cram_restore_dma
+
+    ; restore screen mode
+    ldq     o_charptr
+    stq     vic4_charptr
+    ldq     o_scrnptr
+    stq     vic4_scrnptr
+    lda     o_palsel
+    sta     vic4_palsel
+    lda     o_vic2_crb
+    sta     vic2_crb
+    lda     o_linestep
+    sta     vic4_linesteplsb
+    lda     o_crc
+    sta     vic4_crc
+    lda     o_vic3_crb
+    sta     vic3_crb
+    lda     o_bordercol
+    sta     vic2_bordercol
+    lda     o_scrcol
+    sta     vic2_bgcol0
+
+    rts
+
+; ----------------------------------
+
+time        defl    0
+
+sine        blk     256
+sine_value  word    0
+sine_delta  word    0
+
+scr_first   byte    0
+scr_sprx    word    0
+scr_time    byte    0
+scr_hiaddr  byte    0
+scr_pos     word    0
+scr_t       word    0
+
+bits        byte    1, 2, 4, 8, 16, 32, 64, 128
+
+; ----------------------------------
+
+o_bordercol byte    0
+o_scrcol    byte    0
+o_vic2_crb  byte    0
+o_vic3_crb  byte    0
+o_crc       byte    0
+o_linestep  byte    0
+o_scrnptr   defl    0
+o_palsel    byte    0
+o_charptr   defl    0
+o_irq       word    0
+
+; ----------------------------------
+
+nl_cram
+    incbin  "obj/data/nl-cram.bin"
+nl_cset
+    incbin  "obj/data/nl-cset.bin"
+nl_scr
+    incbin  "obj/data/nl-scr.bin"
+
+nl_cram_dma
+    dma_cmd_copy 40*25, nl_cram, vic4_cram
+nl_cset_dma
+    dma_cmd_copy 40*25*2, nl_cset, a_charset
+nl_scr_dma
+    dma_cmd_copy 40*25, nl_scr, a_scrnptr
+
+; ----------------------------------
+
+cram_backup_dma
+    dma_cmd_copy 40*25, vic4_cram, a_cram_backup
+cram_restore_dma
+    dma_cmd_copy 40*25, a_cram_backup, vic4_cram
+
+; ----------------------------------
+
+music_init  = $0e00
+music_isr   = $0e03
+
+music
+    incbin "obj/data/music.sid", $7e
+music_end
+music_len
+    word music_end - music
+music_copy_dma
+    dma_cmd_copy music_len, music, a_music
+
+; ----------------------------------
+
+    align 7
+
+scr_font
+    incbin  "obj/data/scr_font.bin"
+scr_top
+    byte    0
+scr_text
+    include "obj/data/text.a65"

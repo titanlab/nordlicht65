@@ -1,0 +1,97 @@
+; ----------------------------------
+; 6of5
+; ----------------------------------
+
+main2
+    sei
+
+    ; store stack pointer
+    tsx
+    stx     o_sp
+
+    ; don't call BASIC in the kernel's IRQ handler (we don't seem to need it on newer ROMs anymore)
+    lda     #1
+    trb     $1104
+
+    ; copy over music via dma
+    dma_run music_copy_dma
+
+    ; disable ROM protection to make chip RAM usable
+    ; -> 0x20000-0x3ffff
+    htrap   hyppo_toggle_rom_writeprot
+
+    ; force to run at 48mhz
+    cpu_48mhz
+
+    ; enable VIC-IV
+    vic_knock_iv
+
+    ; print M65 model
+    jsr     kernal_primm
+    string  "D629: $"
+    lda     util_m65model
+    jsr     print_byte
+    lda     #pet_cr
+    jsr     kernal_chrout
+
+    ; store irq address
+    lda     reg_cinv
+    sta     o_irq
+    lda     reg_cinv+1
+    sta     o_irq+1
+
+    ; start demo
+    jsr     demo_start
+
+    ; reset memory mapping
+    map_default
+    jsr     $038d ; tell BASIC about new memory mapping
+
+    ; disable interface ROM for now, seems to be unused by regular kernal ROM
+    lda     #%00100000
+    trb     vic3_map
+
+    ; used by rom:  0x0000-0x1fff
+    ; free are now: 0x2000-0xcfff
+    ; i/o:          0xd000-0xdfff
+    ; kernal:       0xe000-0xffff
+
+    eom
+    cli
+
+    ; kernal is running in the background, we can use many ROM routines,
+    ; so start the next startup phase
+    jsr     demo_main
+
+    sei
+
+    ; reset memory mapping
+    map_default
+    jsr     $038d ; tell BASIC about new memory mapping
+
+    ; enable interface ROM again
+    lda     #%00100000
+    tsb     vic3_map
+
+    ; enable ROM protection
+    htrap   hyppo_toggle_rom_writeprot
+
+    ; restore old IRQ
+    setirqa o_irq
+
+    ; stop demo
+    jsr     demo_stop
+
+    ; enable BASIC IRQs again
+    lda     #1
+    tsb     $1104
+
+    ; restore stack pointer
+    ldx     o_sp
+    txs
+
+    cli
+
+    rts
+
+o_sp        byte 0
